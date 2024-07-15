@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+// import "@openzeppelin/contracts/access/Ownable.sol";
 
 // To - DO
 // add a mapping to  map title id to owner id
@@ -10,27 +10,27 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 
 // not sure if ownable should be used
-contract LandTitle is Ownable {
+contract LandTitle {
     address public oracle;      // Oracle address
     uint256 public timeout;     // Timeout in AEST as UNIX timestamp
 
     struct Title{
         uint256 id; // unique identifier
         string details; // location details
-        address owner;
+        uint256 ownerId; // userId from user contract
         uint256 price;
         bool forSale;
     }
 
     mapping(uint256 => Title) public titles; // map title_id to Title
-    mapping(uint256 => address) public owners; // map title_id to owner
+    // mapping(uint256 => address) public owners; // map title_id to owner
     uint256 public nextId;
 
     // Events informing contract activities
-    event checkOwnership(address owner, uint256 titleId);
-    event TitleCreated(uint256 id, string details, address owner);
-    event TitleForSale(uint256 id, uint256 price);
-    event TitleSold(uint256 id, address newOwner);
+    event checkOwnership(address owner, uint256 titleId); // approved by oracle
+    event TitleCreated(uint256 titleId, string details, uint256 ownerId); // response given to owner
+    event TitleForSale(uint256 titleId, uint256 price); 
+    event TitleSold(uint256 id, uint256 sellerId); // response given to seller
 
     /**
      * @dev Constructor.
@@ -47,10 +47,10 @@ contract LandTitle is Ownable {
      * @dev Request to create title as a owner. Once the request is made
      * oracle is informed to perform verification and send status via event
      */
-    function createTitle(string memory _details) public onlyOwner {
-        titles[nextId] = Title(nextId, _details, msg.sender, 0, false);
-        owners[nextId] = msg.sender;
-        emit TitleCreated(nextId, _details, msg.sender);
+    function createTitle(string memory _details, uint userId) public {
+        titles[nextId] = Title(nextId, _details, userId, 0, false);
+        // owners[nextId] = msg.sender;
+        emit TitleCreated(nextId, _details, userId);
         nextId++;
     }
 
@@ -58,22 +58,22 @@ contract LandTitle is Ownable {
         return titles[_id];
     }
 
-    function putTitleForSale(uint256 _id, uint256 _price) public {
-        require(titles[_id].owner == msg.sender, "Only the owner can put the title for sale");
-        titles[_id].price = _price;
-        titles[_id].forSale = true;
-        emit TitleForSale(_id, _price);
+    function putTitleForSale(uint256 _titleId, uint256 _userId, uint256 _price) public {
+        require(titles[_titleId].ownerId == _userId, "Only the owner can put the title for sale");
+        titles[_titleId].price = _price;
+        titles[_titleId].forSale = true;
+        emit TitleForSale(_titleId, _price);
     }
 
-    function buyTitle(uint256 _id) public {
-        require(titles[_id].forSale, "This title is not for sale");
-        require(oracle.verifyPayment(msg.sender, titles[_id].price), "Payment not verified");
+    function buyTitle(uint256 _titleId, uint256 buyerId) public {
+        require(titles[_titleId].forSale, "This title is not for sale");
+        // require(oracle.verifyPayment(msg.sender, titles[_id].price), "Payment not verified");
 
-        address seller = titles[_id].owner;
-        titles[_id].owner = msg.sender;
-        titles[_id].forSale = false;
-        titles[_id].price = 0;
+        uint256 sellerId = titles[_titleId].ownerId;
+        titles[_titleId].ownerId = buyerId;
+        titles[_titleId].forSale = false;
+        titles[_titleId].price = 0;
 
-        emit TitleSold(_id, msg.sender);
+        emit TitleSold(_titleId, sellerId);
     }
 }
