@@ -16,14 +16,13 @@ A secure and efficient land title management system using Ethereum blockchain. A
 * yarn add --dev hardhat
 * $ npx hardhat init
 
-
-Welcome to Hardhat v2.22.6
-
-? What do you want to do? …
- Create a JavaScript project
-  Create a TypeScript project
-  Create a TypeScript project (with Viem)
-->  Create an empty hardhat.config.js
-  Quit
+\
+Welcome to Hardhat v2.22.6\
+? What do you want to do? …\
+ Create a JavaScript project\
+  Create a TypeScript project\
+  Create a TypeScript project (with Viem)\
+->  Create an empty hardhat.config.js\
+  Quit\
 
 * yarn hardhat compile
