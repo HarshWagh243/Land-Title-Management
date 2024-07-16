@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+// privacy as in only the lands that are for sale will be visible to the buyer and not allb
+
 contract LandTitle {
     address public oracle;      // Oracle address
     uint256 public timeout;     // Timeout in AEST as UNIX timestamp
+    bool public inUse; // used to kill a contract
 
     struct Title{
         uint256 id; // unique identifier
@@ -18,7 +21,7 @@ contract LandTitle {
     uint256 public nextId;
 
     // Events informing contract activities
-    event checkOwnership(address owner, uint256 titleId); // approved by oracle
+    event checkOwnership(uint256 owner, string details); // approved by oracle
     event TitleCreated(uint256 titleId, string details, uint256 ownerId); // response given to owner
     event TitleForSale(uint256 titleId, uint256 price);
     event VerifyTransaction(uint256 buyerId, uint256 sellerId);
@@ -33,6 +36,7 @@ contract LandTitle {
     constructor(address _oracle, uint256 _timeout) {
         oracle = _oracle;
         timeout = _timeout;
+        inUse = true;
     }
 
     /**
@@ -41,14 +45,24 @@ contract LandTitle {
      */
     function createTitle(string memory _details, uint userId) public {
         titles[nextId] = Title(nextId, _details, userId, 0, false); // price set to zero as not yet put for sale
+        emit checkOwnership(userId, _details);
         emit TitleCreated(nextId, _details, userId);
         nextId++;
     }
 
+    /**
+     * @dev Request title details as a buyer.
+     */
     function getTitle(uint256 _id) public view returns (Title memory) {
         return titles[_id];
     }
 
+    /**
+     * @dev Put title on sale as a owner.
+     * @param _titleId id of the title
+     * @param _userId id of the user, to check if they're the owner
+     * @param _price at which they want to sell
+     */
     function putTitleForSale(uint256 _titleId, uint256 _userId, uint256 _price) public {
         require(titles[_titleId].ownerId == _userId, "Only the owner can put the title for sale");
         titles[_titleId].price = _price;
@@ -56,6 +70,11 @@ contract LandTitle {
         emit TitleForSale(_titleId, _price);
     }
 
+    /**
+     * @dev Put title on sale as a owner.
+     * @param _titleId id of the title
+     * @param buyerId id of the buyer
+     */
     function buyTitle(uint256 _titleId, uint256 buyerId) public {
         require(titles[_titleId].forSale, "This title is not for sale");
 

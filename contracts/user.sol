@@ -1,27 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./landTitle.sol";
-// // Steps
-// // register user ask oracle for permission
-// // if the user wants to add their land to owns
-//     // ask oracle for verification and add land to their owns map (this could be integrated with the landtitle)
-//     // use addtitle from landtitle
-// // if the user wants to buys a land
-//     // initiate transaction using buytitle in landtitle
-//     // verification of transaction
-//     // change of ownership
-// // if user wants to sell a land
-//     // call putforsale in landtitle   
+import "./landTitle.sol";  
 
 // // To -do 
 // // oracle to database connectivity(at the very end if possible)
-// // 
-// // figure out more user attributes (other than ID)
-// // 
-// // This will import landTitle contract
-// // includes:
-// // user registration (handled by an oracle(typescript) refer lab 3(dummy oracle))
+
 //     // function that returns all the land that the user owns
 //                         // OR
 //     // should we have a list for each user to store the land that they own (probably because a user can be either buyer 
@@ -33,7 +17,7 @@ contract userFunctionality{
     uint256 certIdCounter;
 
     mapping(address => userDetails) users;
-    mapping(uint => mapping(uint => bool)) owners;
+    mapping(uint256 => mapping(uint => bool)) owners;
 
     // events
     event getUserVerified(uint256 userId);
@@ -59,22 +43,42 @@ contract userFunctionality{
     /**
      * @dev add users to the network.
      */
-    function addUsers(bool isValid) public{
-
+    function userRegistration(bool isValid) public{
         emit getUserVerified(users[msg.sender].userId);
-        
         if (isValid){
             users[msg.sender] = userDetails(idCounter, certIdCounter);
         }
     }
 
     /**
-     * @dev add users owned land.
+     * @dev add owned land.
      *
-     * @param _title LandTitle details (struct from landtitle) 
+     * @param _details LandTitle details (struct from landtitle) 
      */ 
-    function addLandDetails(string memory _title) public{
-        // oracle will verify the details and then 
-        titleContract.createTitle(_title, users[msg.sender].userId);
+    function addLandDetails(string memory _details) public{
+        require(users[msg.sender].userId >= 1, 'User not registered!');
+        titleContract.createTitle(_details, users[msg.sender].userId);
     }
+
+    /**
+     * @dev put a title on sale.
+     *
+     * @param _titleId LandTitle details (struct from landtitle) 
+     */ 
+    function putForSale(uint256 _titleId, uint256 _price) public{
+        // oracle will verify the details and then 
+        require(users[msg.sender].userId >= 1, 'User not registered!');
+        titleContract.putTitleForSale(_titleId, users[msg.sender].userId, _price);
+    }
+
+    /**
+     * @dev buy a land.
+     *
+     * @param _titleId LandTitle details (struct from landtitle) 
+     */ 
+    function buyThisTitle(uint256 _titleId) public{
+        // oracle will verify the details and then 
+        require(users[msg.sender].userId >= 1, 'User not registered!');
+        titleContract.buyTitle(_titleId, users[msg.sender].userId);
+    } 
 }
