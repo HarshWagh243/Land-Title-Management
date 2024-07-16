@@ -13,8 +13,9 @@ import "./landTitle.sol";
 contract userFunctionality{
     address public titleAddress;
     LandTitle public titleContract;
-    uint256 idCounter;
-    uint256 certIdCounter;
+    uint256 private idCounter;
+    uint256 private certIdCounter;
+    bool public isBeingUsed;
 
     mapping(address => userDetails) users;
     mapping(uint256 => mapping(uint => bool)) owners;
@@ -38,6 +39,7 @@ contract userFunctionality{
         titleContract = LandTitle(_landTitleAddress);
         idCounter = 1;
         certIdCounter = 1000;
+        isBeingUsed = true;
     }
 
     /**
