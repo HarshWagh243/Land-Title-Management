@@ -1,15 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-// import "@openzeppelin/contracts/access/Ownable.sol";
-
-// To - DO
-// add a mapping to  map title id to owner id
-// probably have an escrow contract to manage transaction
-// figure out more functionalities and add them in to-do
-
-
-// not sure if ownable should be used
 contract LandTitle {
     address public oracle;      // Oracle address
     uint256 public timeout;     // Timeout in AEST as UNIX timestamp
@@ -29,7 +20,8 @@ contract LandTitle {
     // Events informing contract activities
     event checkOwnership(address owner, uint256 titleId); // approved by oracle
     event TitleCreated(uint256 titleId, string details, uint256 ownerId); // response given to owner
-    event TitleForSale(uint256 titleId, uint256 price); 
+    event TitleForSale(uint256 titleId, uint256 price);
+    event VerifyTransaction(uint256 buyerId, uint256 sellerId);
     event TitleSold(uint256 id, uint256 sellerId); // response given to seller
 
     /**
@@ -48,8 +40,7 @@ contract LandTitle {
      * oracle is informed to perform verification and send status via event
      */
     function createTitle(string memory _details, uint userId) public {
-        titles[nextId] = Title(nextId, _details, userId, 0, false);
-        // owners[nextId] = msg.sender;
+        titles[nextId] = Title(nextId, _details, userId, 0, false); // price set to zero as not yet put for sale
         emit TitleCreated(nextId, _details, userId);
         nextId++;
     }
@@ -67,6 +58,8 @@ contract LandTitle {
 
     function buyTitle(uint256 _titleId, uint256 buyerId) public {
         require(titles[_titleId].forSale, "This title is not for sale");
+
+        emit VerifyTransaction(buyerId, titles[_titleId].ownerId);
         // require(oracle.verifyPayment(msg.sender, titles[_id].price), "Payment not verified");
 
         uint256 sellerId = titles[_titleId].ownerId;

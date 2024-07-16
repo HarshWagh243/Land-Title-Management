@@ -72,7 +72,7 @@ contract userFunctionality{
      * @dev add users owned land.
      *
      * @param _title LandTitle details (struct from landtitle) 
-     */
+     */ 
     function addLandDetails(string memory _title) public{
         // oracle will verify the details and then 
         titleContract.createTitle(_title, users[msg.sender].userId);
