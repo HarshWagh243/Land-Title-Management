@@ -5,11 +5,9 @@ import "./landTitle.sol";
 
 // // To -do 
 // // oracle to database connectivity(at the very end if possible)
+// get function for user details
+// should deployer be different than oracle
 
-//     // function that returns all the land that the user owns
-//                         // OR
-//     // should we have a list for each user to store the land that they own (probably because a user can be either buyer 
-//     // or seller, in the later stages a buyer(intially had no land) may want to sell the land they own)a
 contract userFunctionality{
     address public titleAddress;
     LandTitle public titleContract;
@@ -21,7 +19,8 @@ contract userFunctionality{
     mapping(uint256 => mapping(uint => bool)) owners;
 
     // events
-    event getUserVerified(uint256 userId);
+    event getUserVerified(address userAddress);
+    event userVerified(address userAddress, bool verified);
 
     struct userDetails{
         uint256 userId;
@@ -43,13 +42,27 @@ contract userFunctionality{
     }
 
     /**
-     * @dev add users to the network.
+     * @dev users initiates the registration.
      */
-    function userRegistration(bool isValid) public{
-        emit getUserVerified(users[msg.sender].userId);
-        if (isValid){
-            users[msg.sender] = userDetails(idCounter, certIdCounter);
+    function userRegistration() public{
+        emit getUserVerified(msg.sender);
+    }
+
+    /**
+     * @dev oracle verifies user
+     * @param userAddress address of the user
+     * @param verified true if oracle verifies
+     */
+    function verifyUser(address userAddress, bool verified) public{
+        require(titleContract.inUse(), "Contract is disabled!");
+        require(msg.sender == titleContract.oracle(), "Only oracle can add the user!");
+        if (verified){
+            users[userAddress].userId = idCounter;
+            users[userAddress].certificateId = certIdCounter;
+            idCounter++;
+            certIdCounter++;
         }
+        emit userVerified(userAddress, verified);
     }
 
     /**
@@ -58,6 +71,7 @@ contract userFunctionality{
      * @param _details LandTitle details (struct from landtitle) 
      */ 
     function addLandDetails(string memory _details) public{
+        require(titleContract.inUse(), "Contract is disable!");
         require(users[msg.sender].userId >= 1, 'User not registered!');
         titleContract.createTitle(_details, users[msg.sender].userId);
     }
@@ -82,5 +96,5 @@ contract userFunctionality{
         // oracle will verify the details and then 
         require(users[msg.sender].userId >= 1, 'User not registered!');
         titleContract.buyTitle(_titleId, users[msg.sender].userId);
-    } 
+    }
 }
