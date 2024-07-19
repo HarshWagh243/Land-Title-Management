@@ -16,8 +16,16 @@ contract LandTitle {
         bool forSale;
     }
 
+    // struct userTimeout{
+    //     uint256 title_id;
+    //     uint256 time_epoch;
+    // }    
+
     mapping(uint256 => Title) public titles; // map title_id to Title
     // mapping(uint256 => address) public owners; // map title_id to owner
+
+    mapping(uint256 => mapping(uint256 => uint256)) public timeouts; // map titleId to a map of { buyerId : block time } 
+
     uint256 public nextId;
 
     // Events informing contract activities
@@ -93,9 +101,13 @@ contract LandTitle {
      */ 
     // add timestamp implementation
     function buyTitle(uint256 _titleId, uint256 buyerId) public {
+
+        // get timestamp from each user
+        // if multiple users access, we need to track the time for each user separately so have a mapping
+
         require(inUse, "Contract is disabled!");
         require(titles[_titleId].forSale, "This title is not for sale");
-
+        timeouts[_titleId][buyerId] = block.timestamp; // adds the time at which this function was initiated
         emit VerifyTransaction(buyerId, titles[_titleId].ownerId);
     }
     /**
@@ -107,6 +119,9 @@ contract LandTitle {
         require(inUse, "Contract is disabled!");
         require(msg.sender == address(oracle), "Only the oracle can approve purchase");
         
+        // verify if the timeout has expired or not.  
+        require(!isTimedOut(_titleId, buyerId), "Transaction has timed out");
+
         uint256 sellerId = titles[_titleId].ownerId;
         
         if (txnVerified){
@@ -117,5 +132,15 @@ contract LandTitle {
         
         emit TitleSold(_titleId, buyerId, txnVerified);
         emit TitlePurchased(_titleId, sellerId, txnVerified);
+    }
+    /**
+     * 
+     * @param _titleId ID of the title
+     * @param buyerId  ID of the buyer
+     * BOTH these parameters are part of the timeouts mapping
+     */
+    function isTimedOut(uint256 _titleId, uint256 buyerId) public view returns (bool) {
+        uint256 startTime = timeouts[_titleId][buyerId];
+        return block.timestamp > startTime + 259200; // 86400 seconds in one day * 3 = 259200
     }
 }
