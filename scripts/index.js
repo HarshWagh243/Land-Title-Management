@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 
 async function main() {
     const [oracle] = await ethers.getSigners();
+
     console.log("Deploying contracts with the account:", oracle.address);
 
     const LandTitle = await ethers.getContractFactory("LandTitle");
