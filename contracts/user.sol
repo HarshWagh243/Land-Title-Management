@@ -29,11 +29,15 @@ contract userFunctionality{
     event getLandVerified(address userAddress, string details);
     event LandVerified(uint256 userId, uint256 titleId, string details, bool verified);
     event LandDetails(uint256 titleId, uint256 ownerId, uint256 price, string details);
+    event TitleSold(uint256 _titleId, uint256 sellerId, bool sold); 
+    event TitleNotOnSale(uint256 _buyerId);
+    event TitlePurchased(uint256 id, uint256 buyerId, bool purchased);
+    event verifyPurchaseOracle(uint256 titleId, uint256 buyerId);
+    event PurchaseVerified(uint256 _titleId, uint256 sellerId, bool sold);
 
     struct userDetails{
         uint256 userId;
         uint256 certificateId; //stores id of certificate issued by CA
-        // mapping(uint256 => bool) owns; //map title id to true // has to be removed as mappings can not be in a struct
     }
 
     /**
@@ -144,10 +148,19 @@ contract userFunctionality{
      *
      * @param _titleId LandTitle details (struct from landtitle) 
      */ 
-    function buyThisTitle(uint256 _titleId) public{
+    function buyThisTitle(uint256 _titleId) public {
         // oracle will verify the details and then 
-        require(users[msg.sender].userId >= 1, 'User not registered!');
-        titleContract.buyTitle(_titleId, users[msg.sender].userId);
+        uint256 buyerId = users[msg.sender].userId;
+        require(buyerId >= 1, 'User not registered!');
+    
+        if (titleContract.checkOnSale(_titleId)){
+            emit verifyPurchaseOracle(_titleId,  buyerId);
+        }
+        else{
+            emit TitleNotOnSale(buyerId);
+        }
+            
+        
     }
     /**
      * @dev check if user owns a land
@@ -161,4 +174,24 @@ contract userFunctionality{
         require(msg.sender == titleContract.oracle(), "Only oracle can check ownership!");
         return owners[userId][titleId];
     }
+    /**
+     * @dev check if user owns a land
+     *
+     * @param buyerId user id
+     * @param titleId LandTitle details (struct from landtitle) 
+     * @param verified or not
+     */ 
+    function verifyPurchase(uint256 buyerId, uint256 titleId, bool verified) public{
+        require(msg.sender == titleContract.oracle(), "Only oracle can add the user!");
+        // Timeout functionality
+        uint256 sellerId = titleContract.getTitleOwnerId(titleId);
+        if (verified){
+            owners[sellerId][titleId] = false;
+            owners[buyerId][titleId] = true;
+        }
+        titleContract.approvePurchase(titleId, buyerId, verified);
+        emit TitleSold(titleId, sellerId, verified);
+        emit TitlePurchased(titleId, buyerId, verified);
+    }
+
 }

@@ -20,7 +20,6 @@ contract LandTitle {
     mapping(uint256 => Title) public titles; // map title_id to Title
     // mapping(uint256 => address) public owners; // map title_id to owner
     
-
     // Events informing contract activities
     // event checkOwnership(uint256 owner, string details); // approved by oracle
     // event TitleCreated(uint256 titleId, string details, uint256 ownerId); // response given to owner
@@ -38,20 +37,11 @@ contract LandTitle {
         oracle = _oracle;
         // timeout = _timeout; 
         inUse = true;
+
+        
         nextId = 10000;
     }
-
-    // /**
-    //  * @dev Request to create title as a owner. Once the request is made
-    //  * oracle is informed to perform verification and send status via event
-    //  * @param _details land info
-    //  * @param userId users Id
-    //  */
-    // function createTitle(string memory _details, uint userId) public returns (bool) {
-    //     titles[nextId] = Title(nextId, _details, userId, 0, false); // price set to zero as not yet put for sale
-    //     // emit checkOwnership(userId, _details);
-    // }   
-
+  
     /**
      * @dev oracle has verified the title
      */
@@ -87,6 +77,12 @@ contract LandTitle {
     function getTitleOwnerId(uint256 _id) public view returns (uint256){
         return titles[_id].ownerId;
     }
+    /**
+     * @dev Request title onSale status.
+     */
+    function checkOnSale(uint256 _titleId) public view returns (bool){
+        return titles[_titleId].forSale;
+    }
 
     /**
      * @dev Put title on sale as a owner.
@@ -100,19 +96,6 @@ contract LandTitle {
         titles[_titleId].forSale = true;
         // emit TitleForSale(_titleId, _price);
     }
-
-    /**
-     * @dev Put title on sale as a owner.
-     * @param _titleId id of the title
-     * @param buyerId id of the buyer
-     */ 
-    // add timestamp implementation
-    function buyTitle(uint256 _titleId, uint256 buyerId) public view{
-        require(inUse, "Contract is disabled!");
-        require(titles[_titleId].forSale, "This title is not for sale");
-
-        // emit VerifyTransaction(buyerId, titles[_titleId].ownerId);
-    }
     /**
      * @dev Put title on sale as a owner.
      * @param _titleId id of the title
@@ -120,7 +103,6 @@ contract LandTitle {
      */
     function approvePurchase(uint256 _titleId, uint256 buyerId, bool txnVerified) public {
         require(inUse, "Contract is disabled!");
-        require(msg.sender == address(oracle), "Only the oracle can approve purchase");
         
         // uint256 sellerId = titles[_titleId].ownerId;
         
@@ -130,7 +112,5 @@ contract LandTitle {
             titles[_titleId].price = 0;
         }
         
-        // emit TitleSold(_titleId, buyerId, txnVerified);
-        // emit TitlePurchased(_titleId, sellerId, txnVerified);
     }
 }
