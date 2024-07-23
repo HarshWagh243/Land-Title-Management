@@ -14,7 +14,7 @@ A secure and efficient land title management system using Ethereum blockchain. A
 
 * yarn init -y
 * yarn add --dev hardhat
-* $ npx hardhat init
+* $ yarn hardhat init
 
 \
 Welcome to Hardhat v2.22.6\
@@ -26,3 +26,4 @@ Welcome to Hardhat v2.22.6\
   Quit\
 
 * yarn hardhat compile
+
