@@ -3,10 +3,9 @@ const { ethers } = require("hardhat");
 
 async function main() {
     const [_, __, seller] = await ethers.getSigners();
-
-    const userFunctionalityABI = require('../artifacts/contracts/userFunctionality.sol/userFunctionality.json').abi;
-    const userFunctionalityAddress = "USER_FUNCTIONALITY_CONTRACT_ADDRESS"; // replace with actual address
-
+    
+    const userFunctionalityABI = require('./artifacts/contracts/user.sol/userFunctionality.json').abi;
+    const userFunctionalityAddress = process.env.address1
     const userFunctionalityContract = new ethers.Contract(userFunctionalityAddress, userFunctionalityABI, seller);
 
     const txRegister = await userFunctionalityContract.userRegistration(true);
