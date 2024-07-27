@@ -9,23 +9,35 @@ import "./landTitle.sol";
 // should deployer be different than oracle
 
 contract userFunctionality{
+    // to make sure delegate call doesn't give errors
+    // address oracle;
+    // uint256 public timeout;     // Timeout in AEST as UNIX timestamp should be initiated when transaction is initiated
+    // bool public inUse;
+    // uint256 public nextId;
+
     address public titleAddress;
-    LandTitle public titleContract;
+    LandTitle public titleContract; 
     uint256 private idCounter;
     uint256 private certIdCounter;
-    bool public isBeingUsed;
 
-    mapping(address => userDetails) users;
-    mapping(uint256 => mapping(uint => bool)) owners;
+    mapping(address => userDetails) public users;
+    mapping(uint256 => mapping(uint256 => bool)) owners;
 
     // events
-    event getUserVerified(address userAddress);
+    event getUserVerified(address indexed userAddress);
     event userVerified(address userAddress, bool verified);
+    event getLandVerified(address userAddress, string details);
+    event LandVerified(uint256 userId, uint256 titleId, string details, bool verified);
+    event LandDetails(uint256 titleId, uint256 ownerId, uint256 price, string details);
+    event TitleSold(uint256 _titleId, uint256 sellerId, bool sold); 
+    event TitleNotOnSale(uint256 _buyerId);
+    event TitlePurchased(uint256 id, uint256 buyerId, bool purchased);
+    event verifyPurchaseOracle(uint256 titleId, uint256 buyerId);
+    event PurchaseVerified(uint256 _titleId, uint256 sellerId, bool sold);
 
     struct userDetails{
         uint256 userId;
         uint256 certificateId; //stores id of certificate issued by CA
-        // mapping(uint256 => bool) owns; //map title id to true // has to be removed as mappings can not be in a struct
     }
 
     /**
@@ -38,7 +50,9 @@ contract userFunctionality{
         titleContract = LandTitle(_landTitleAddress);
         idCounter = 1;
         certIdCounter = 1000;
-        isBeingUsed = true;
+        // inUse = titleContract.inUse();
+        // oracle = titleContract.oracle();
+        // nextId = titleContract.nextId();
     }
 
     /**
@@ -53,7 +67,7 @@ contract userFunctionality{
      * @param userAddress address of the user
      * @param verified true if oracle verifies
      */
-    function verifyUser(address userAddress, bool verified) public{
+    function verifyUser(address userAddress, bool verified) public returns (bool){
         require(titleContract.inUse(), "Contract is disabled!");
         require(msg.sender == titleContract.oracle(), "Only oracle can add the user!");
         if (verified){
@@ -63,19 +77,50 @@ contract userFunctionality{
             certIdCounter++;
         }
         emit userVerified(userAddress, verified);
+        return verified;
     }
-
+    /**
+     * @dev add owned land.
+     *
+     * @param userAddress user Address
+     * @return userId of the address provided 
+     */ 
+    function getUserId(address userAddress) public view returns(uint256){
+        return users[userAddress].userId;
+    }
+    
     /**
      * @dev add owned land.
      *
      * @param _details LandTitle details (struct from landtitle) 
      */ 
-    function addLandDetails(string memory _details) public{
+    function sendLandDetails(string memory _details) public{
         require(titleContract.inUse(), "Contract is disable!");
         require(users[msg.sender].userId >= 1, 'User not registered!');
-        titleContract.createTitle(_details, users[msg.sender].userId);
+        emit getLandVerified(msg.sender, _details);
     }
-
+    /**
+     * @dev add owned land.
+     *
+     * @param _details LandTitle details (struct from landtitle) 
+     */ 
+    function verifyLandDetails(string memory _details, address userAddress, bool verified) public returns (uint256, uint256){
+        // uint256 tempId = 0;
+        uint256 userId = users[userAddress].userId;
+        require(titleContract.inUse(), "Contract is disable!");
+        require(msg.sender == titleContract.oracle(), "Only oracle can add the user!");
+        require(userId >= 1, 'User not registered!');
+        uint256 titleId = titleContract.addTitle(_details, userId, verified);
+        if (verified){
+            // require(success, "Delegate Call failed!");
+            // tempId = abi.decode(result, (uint256));
+            require(titleId >= 10000);
+            // tempId = titleContract.addTitle(_details, userId, verified);
+            owners[userId][titleId] = true;
+        }
+        emit LandVerified(userId, titleId, _details, verified);
+        return (userId, titleId);
+    }    
     /**
      * @dev put a title on sale.
      *
@@ -88,13 +133,66 @@ contract userFunctionality{
     }
 
     /**
+     * @dev put a title on sale.
+     *
+     * @param _titleId LandTitle details (struct from landtitle) 
+     */ 
+    function getLandDetails(uint256 _titleId) public{
+        // oracle will verify the details and then 
+        require(users[msg.sender].userId >= 1, 'User not registered!');
+        emit LandDetails(_titleId, titleContract.getTitleOwnerId(_titleId), titleContract.getTitlePrice(_titleId), titleContract.getTitleDetails(_titleId));
+    }
+
+    /**
      * @dev buy a land.
      *
      * @param _titleId LandTitle details (struct from landtitle) 
      */ 
-    function buyThisTitle(uint256 _titleId) public{
+    function buyThisTitle(uint256 _titleId) public {
         // oracle will verify the details and then 
-        require(users[msg.sender].userId >= 1, 'User not registered!');
-        titleContract.buyTitle(_titleId, users[msg.sender].userId);
+        uint256 buyerId = users[msg.sender].userId;
+        require(buyerId >= 1, 'User not registered!');
+    
+        if (titleContract.checkOnSale(_titleId)){
+            titleContract.setTimeout(_titleId, buyerId);
+            emit verifyPurchaseOracle(_titleId,  buyerId);
+        }
+        else{
+            emit TitleNotOnSale(buyerId);
+        }
+            
+        
     }
+    /**
+     * @dev check if user owns a land
+     *
+     * @param userId user id
+     * @param titleId LandTitle details (struct from landtitle) 
+     */ 
+    function checkOwns(uint256 userId, uint256 titleId) public view returns (bool){
+        // oracle will verify the details and then 
+        // require(users[msg.sender].userId >= 1, 'User not registered!');
+        require(msg.sender == titleContract.oracle(), "Only oracle can check ownership!");
+        return owners[userId][titleId];
+    }
+    /**
+     * @dev check if user owns a land
+     *
+     * @param buyerId user id
+     * @param titleId LandTitle details (struct from landtitle) 
+     * @param verified or not
+     */ 
+    function verifyPurchase(uint256 buyerId, uint256 titleId, bool verified) public{
+        require(msg.sender == titleContract.oracle(), "Only oracle can add the user!");
+        // Timeout functionality
+        uint256 sellerId = titleContract.getTitleOwnerId(titleId);
+        if (verified){
+            owners[sellerId][titleId] = false;
+            owners[buyerId][titleId] = true;
+        }
+        titleContract.approvePurchase(titleId, buyerId, verified);
+        emit TitleSold(titleId, sellerId, verified);
+        emit TitlePurchased(titleId, buyerId, verified);
+    }
+
 }
