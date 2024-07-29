@@ -138,33 +138,38 @@ describe('landTitle', () => {
                 .to.be.revertedWith("Transaction has timed out");
         });
     });
-    describe('Buy only if its on Sale', () => {
-        it('should not allow to buy as its not on sale', async () => {
-            await userContract.connect(seller).sendLandDetails("pennant hills");
+
+    describe("Double Purchase Attempt", () => {
+        it("Should not allow to buy the same title twice", async () => {
+            // Seller sends land details
+            await expect(userContract.connect(seller).sendLandDetails("pennant hills"))
+                .to.emit(userContract, "getLandVerified")
+                .withArgs(seller.address, "pennant hills");
+    
             const sellerId = await userContract.getUserId(seller.address);
             const titleId = await landContract.nextId();
-
-            await userContract.connect(oracle).verifyLandDetails("pennant hills", seller.address, true);
-
+            const buyerId = await userContract.getUserId(buyer.address);
+    
+            // Oracle verifies land details
+            await expect(userContract.connect(oracle).verifyLandDetails("pennant hills", seller.address, true))
+                .to.emit(userContract, "LandVerified")
+                .withArgs(sellerId, titleId, "pennant hills", true);
+    
+            // Seller puts the title for sale
+            await userContract.connect(seller).putForSale(titleId, 100);
+            expect(await landContract.getTitlePrice(titleId)).to.equal(100);
+    
+            // Buyer buys the title
+            await userContract.connect(buyer).buyThisTitle(titleId);
+            await expect(userContract.connect(oracle).verifyPurchase(buyerId, titleId, true))
+                .to.emit(userContract, "TitleSold")
+                .withArgs(titleId, sellerId, true);
+    
+            // Attempt to buy the same title again
             try {
                 await userContract.connect(buyer).buyThisTitle(titleId);
             } catch (error) {
-                expect(error.message).to.include('TitleNotOnSale');
             }
-        });
-
-        it('should allow only if title is on sale', async () => {
-            await userContract.connect(seller).sendLandDetails("pennant hills");
-            const sellerId = await userContract.getUserId(seller.address);
-            const titleId = await landContract.nextId();
-
-            await userContract.connect(oracle).verifyLandDetails("pennant hills", seller.address, true);
-
-            // Putting the title for sale
-            await userContract.connect(seller).putForSale(titleId, 100); 
-
-            expect(await landContract.getTitlePrice(titleId)).to.equal(100);
-            await userContract.connect(buyer).buyThisTitle(titleId);
         });
     });
 
