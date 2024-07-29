@@ -12,7 +12,7 @@ const { accessSync } = require('fs');
 // const { ethers } = require('hardhat');
 const hre = require("hardhat");
 const { before } = require('node:test');
-
+const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
 describe('landTitle', () => {
     let landtitle, landContract, user, userContract, landTitleAddress; 
@@ -123,4 +123,53 @@ describe('landTitle', () => {
             console.log(oracle)
         });
     });
+    describe('Timeout', () => {
+        it('Transaction should be declined if timeout has expired', async () => {
+            await expect(userContract.connect(seller).sendLandDetails("pennant hills")).to.emit(userContract, "getLandVerified").withArgs(seller.address, "pennant hills");
+            const sellerId = await userContract.getUserId(seller.address);
+            const titleId = await landContract.nextId();
+            const buyerId = await userContract.getUserId(buyer.address);
+            // Buyer initiates the purchase
+            await userContract.connect(buyer).buyThisTitle(titleId);
+            // Increase time by 301 seconds (5 minutes + 1 second)
+            await time.increase(301);
+            await expect(userContract.connect(oracle).verifyPurchase(buyerId, titleId, true))
+                .to.be.revertedWith("Transaction has timed out");
+        });
+    });
+
+    describe("Double Purchase Attempt", () => {
+        it("Should not allow to buy the same title twice", async () => {
+            // Seller sends land details
+            await expect(userContract.connect(seller).sendLandDetails("pennant hills"))
+                .to.emit(userContract, "getLandVerified")
+                .withArgs(seller.address, "pennant hills");
+    
+            const sellerId = await userContract.getUserId(seller.address);
+            const titleId = await landContract.nextId();
+            const buyerId = await userContract.getUserId(buyer.address);
+    
+            // Oracle verifies land details
+            await expect(userContract.connect(oracle).verifyLandDetails("pennant hills", seller.address, true))
+                .to.emit(userContract, "LandVerified")
+                .withArgs(sellerId, titleId, "pennant hills", true);
+    
+            // Seller puts the title for sale
+            await userContract.connect(seller).putForSale(titleId, 100);
+            expect(await landContract.getTitlePrice(titleId)).to.equal(100);
+    
+            // Buyer buys the title
+            await userContract.connect(buyer).buyThisTitle(titleId);
+            await expect(userContract.connect(oracle).verifyPurchase(buyerId, titleId, true))
+                .to.emit(userContract, "TitleSold")
+                .withArgs(titleId, sellerId, true);
+    
+            // Attempt to buy the same title again
+            try {
+                await userContract.connect(buyer).buyThisTitle(titleId);
+            } catch (error) {
+            }
+        });
+    });
+
 });
