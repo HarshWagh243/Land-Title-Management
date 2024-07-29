@@ -1,19 +1,21 @@
 // scripts/oracleListener.js
 // const { ethers } = require("ethers");
+const { ethers } = require("hardhat");
 const readline = require("readline");
+const fs = require("fs");
 
-async function oracle() {
-    const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
-    const oraclePrivateKey = "YOUR_ORACLE_PRIVATE_KEY";
-    const oracleWallet = new ethers.Wallet(oraclePrivateKey, provider);
+async function main() {
+    // const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
+    const [,oracle] = await ethers.getSigners();
 
-    const landTitleABI = require('../artifacts/contracts/LandTitle.sol/LandTitle.json').abi;
-    const landTitleAddress = "LAND_TITLE_CONTRACT_ADDRESS"; // replace with actual address
-
-    const landTitleContract = new ethers.Contract(landTitleAddress, landTitleABI, oracleWallet);
-
-    landTitleContract.on("getUserVerified", async (userId) => {
-        console.log(`getUserVerified event received for userId: ${userId}`);
+    const userData = fs.readFileSync('artifacts/contracts/user.sol/userFunctionality.json', 'utf8');
+    const userJson = JSON.parse(userData);
+    const userABI = userJson.abi;
+    const userAddress = process.env.address1
+    const userContract = new ethers.Contract(userAddress, userABI, oracle);
+    console.log("Oracle is listening for events...");
+    userContract.on("getUserVerified", async (address) => {
+        console.log(`getUserVerified event received for userId: ${address}`);
 
         const rl = readline.createInterface({
             input: process.stdin,
@@ -22,20 +24,65 @@ async function oracle() {
 
         rl.question("Approve user registration (yes/no)? ", async (answer) => {
             if (answer.toLowerCase() === "yes") {
-                console.log(`User with userId ${userId} approved.`);
+                const txn = await userContract.verifyUser(address, true);
+                await txn.wait();
+                console.log(`User with address ${address} approved.`);
             } else {
-                console.log(`User with userId ${userId} rejected.`);
+                console.log(`User with address ${address} rejected.`);
             }
             rl.close();
-        });
+        }); 
+       console.log("Oracle is listening for events...");
     });
+    userContract.on("verifyPurchaseOracle", async (titleId, buyerId) => {
+        console.log(`verifyPurchaseOracle event received for titleId: ${titleId}`);
+        console.log(`buyerId: ${buyerId}`);
 
-    console.log("Oracle is listening for events...");
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+        });
+
+        rl.question("Transaction complete (yes/no)? ", async (answer) => {
+            if (answer.toLowerCase() === "yes") {
+                const txn = await userContract.verifyPurchase(buyerId, titleId, true);
+                await txn.wait();
+            } else {
+                const txn = await userContract.verifyPurchase(buyerId, titleId, false);
+                await txn.wait();
+            }
+            rl.close();
+        }); 
+       console.log("Oracle is listening for events...");
+    });
+    userContract.on("getLandVerified", async (address, details) => {
+        console.log(`getLandVerified event received for userAddress: ${address}`);
+
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+        });
+
+        rl.question("Approve land registration (yes/no)? ", async (answer) => {
+            if (answer.toLowerCase() === "yes") {
+                const txn = await userContract.verifyLandDetails(details, address, true);
+                await txn.wait();
+                // console.log(`${details} land registration approved.`);
+                // console.log(`Owner: ${address}`);
+            } else {
+                const txn = await userContract.verifyLandDetails(details, address, false);
+                await txn.wait();
+                // console.log(`${details} land registration rejected.`);
+            }
+            rl.close();
+        }); 
+       console.log("Oracle is listening for events...");
+    });
 }
 
-oracle()
-    .then(() => process.exit(0))
-    .catch((error) => {
-        console.error(error);
-        process.exit(1);
-    });
+main()
+    // .then(() => process.exit(0))
+    // .catch((error) => {
+    //     console.error(error);
+    //     process.exit(1);
+    // });
