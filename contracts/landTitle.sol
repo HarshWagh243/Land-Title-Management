@@ -19,6 +19,8 @@ contract LandTitle {
 
     mapping(uint256 => Title) public titles; // map title_id to Title
     // mapping(uint256 => address) public owners; // map title_id to owner
+
+    mapping(uint256 => mapping(uint256 => uint256)) public timeouts; // map titleId to a map of { buyerId : block time }
     
     // Events informing contract activities
     // event checkOwnership(uint256 owner, string details); // approved by oracle
@@ -103,7 +105,7 @@ contract LandTitle {
      */
     function approvePurchase(uint256 _titleId, uint256 buyerId, bool txnVerified) public {
         require(inUse, "Contract is disabled!");
-        
+        require(!isTimedOut(_titleId, buyerId), "Transaction has timed out");
         // uint256 sellerId = titles[_titleId].ownerId;
         
         if (txnVerified){
@@ -112,5 +114,25 @@ contract LandTitle {
             titles[_titleId].price = 0;
         }
         
+    }
+    /**
+     * 
+     * @param _titleId ID of the title
+     * @param buyerId  ID of the buyer
+     * BOTH these parameters are part of the timeouts mapping
+     */
+    function isTimedOut(uint256 _titleId, uint256 buyerId) public view returns (bool) {
+        uint256 startTime = timeouts[_titleId][buyerId];
+        return block.timestamp > startTime + 259200; // 86400 seconds in one day * 3 = 259200
+    }
+
+    /**
+     * 
+     * @param _titleId ID of the title
+     * @param buyerId  ID of the buyer
+     * BOTH these parameters are part of the timeouts mapping
+     */
+    function setTimeout(uint256 _titleId, uint256 buyerId) public {
+        timeouts[_titleId][buyerId] = block.timestamp; // adds the time at which this function was initiated
     }
 }
