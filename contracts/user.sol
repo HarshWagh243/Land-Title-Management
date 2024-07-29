@@ -24,16 +24,16 @@ contract userFunctionality{
     mapping(uint256 => mapping(uint256 => bool)) owners;
 
     // events
-    event getUserVerified(address indexed userAddress);
-    event userVerified(address userAddress, bool verified);
-    event getLandVerified(address userAddress, string details);
-    event LandVerified(uint256 userId, uint256 titleId, string details, bool verified);
-    event LandDetails(uint256 titleId, uint256 ownerId, uint256 price, string details);
-    event TitleSold(uint256 _titleId, uint256 sellerId, bool sold); 
-    event TitleNotOnSale(uint256 _buyerId);
-    event TitlePurchased(uint256 id, uint256 buyerId, bool purchased);
-    event verifyPurchaseOracle(uint256 titleId, uint256 buyerId);
-    event PurchaseVerified(uint256 _titleId, uint256 sellerId, bool sold);
+    event getUserVerified(address indexed userAddress);//oracle
+    event userVerified(address userAddress, bool verified);//user
+    event getLandVerified(address userAddress, string details);//oracle
+    event LandVerified(uint256 userId, uint256 titleId, string details, bool verified);//user
+    event LandDetails(address caller, uint256 titleId, uint256 ownerId, uint256 price, string details);//user
+    event TitleSold(uint256 _titleId, uint256 sellerId, bool sold); //user
+    event TitleNotOnSale(uint256 _buyerId);//user
+    event TitlePurchased(uint256 id, uint256 buyerId, bool purchased);//user
+    event verifyPurchaseOracle(uint256 titleId, uint256 buyerId);//oracle
+    event PurchaseVerified(uint256 _titleId, uint256 sellerId, bool sold);//user
 
     struct userDetails{
         uint256 userId;
@@ -59,7 +59,10 @@ contract userFunctionality{
      * @dev users initiates the registration.
      */
     function userRegistration() public{
-        emit getUserVerified(msg.sender);
+        if (users[msg.sender].userId < 1)
+            emit getUserVerified(msg.sender);
+        else
+            emit userVerified(msg.sender, true);
     }
 
     /**
@@ -138,9 +141,8 @@ contract userFunctionality{
      * @param _titleId LandTitle details (struct from landtitle) 
      */ 
     function getLandDetails(uint256 _titleId) public{
-        // oracle will verify the details and then 
         require(users[msg.sender].userId >= 1, 'User not registered!');
-        emit LandDetails(_titleId, titleContract.getTitleOwnerId(_titleId), titleContract.getTitlePrice(_titleId), titleContract.getTitleDetails(_titleId));
+        emit LandDetails(msg.sender ,_titleId, titleContract.getTitleOwnerId(_titleId), titleContract.getTitlePrice(_titleId), titleContract.getTitleDetails(_titleId));
     }
 
     /**
@@ -154,6 +156,7 @@ contract userFunctionality{
         require(buyerId >= 1, 'User not registered!');
     
         if (titleContract.checkOnSale(_titleId)){
+            titleContract.setTimeout(_titleId, buyerId);
             emit verifyPurchaseOracle(_titleId,  buyerId);
         }
         else{
