@@ -156,7 +156,6 @@ contract userFunctionality{
         require(buyerId >= 1, 'User not registered!');
     
         if (titleContract.checkOnSale(_titleId)){
-            titleContract.setTimeout(_titleId, buyerId);
             emit verifyPurchaseOracle(_titleId,  buyerId);
         }
         else{
