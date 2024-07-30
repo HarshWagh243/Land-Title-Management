@@ -23,26 +23,28 @@ async function main() {
 
     const txRegister = await userContract.userRegistration();
     await txRegister.wait();
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
+
+
     userContract.on("userVerified", async (address, verified) => {
         if(address == seller.address){
             if (verified){
                 console.log('User verification successful!');
                 userRegistered = true;
+                const myUserId = await userContract.getUserId(seller.address);
+                console.log("User ID: ", parseInt(myUserId));
                 const addTitle = await userContract.sendLandDetails("pembroke st.");
                 await addTitle.wait();
             }
-            }
             else{
-                    console.log("User verification failed!");
+                console.log("User verification failed!");
             }
+        }
+    });
+    userContract.on("TitleOnSale", async (titleId, userAddress) => {
+            console.log(`Title with titleId ${titleId} is on Sale!`);
     });
     userContract.on("LandVerified", async (userId, titleId, details, verified) => {
         const myUserId = await userContract.getUserId(seller.address);
-        console.log("My User ID: ", myUserId);
         titlesOnSale.add(parseInt(titleId));
         if(myUserId == userId){
             if (verified){
@@ -52,24 +54,27 @@ async function main() {
             else{
                 console.log(`Land verification ${details} unsuccesful`);
             }
+            const txn = await userContract.putForSale(titleId, 100);
+            await txn.wait();
         }
     });
     userContract.on("LandDetails", async (caller, titleId,  ownerId,  price, details) => {
-        if(caller == buyer.address){
+        if(caller == seller.address){
             if (price == '0'){
-                rl.write(`Land ${titleId} is not on sale`);
+                console.log(`Land ${titleId} is not on sale`);
             }
             else{
-                rl.write(`TitleId:${titleId},\n
-                    OwnerId: ${ownerId},\n  
-                    Price: ${price},\n 
-                    Details: ${details}\n`)
+                console.log(`TitleId:${titleId},
+OwnerId: ${ownerId},
+Price: ${price},
+Details: ${details}`)
             }
         }
+        
 
     });
     userContract.on("TitleSold", async (titleId, sellerId, sold) => {
-        const myUserId = userContract.getUserId(buyer.address);
+        const myUserId = await userContract.getUserId(seller.address);
         if(myUserId == sellerId){
             if (sold){
                 console.log(`Title ${titleId} sold!`);
@@ -80,7 +85,7 @@ async function main() {
         }
     });
     userContract.on("TitleNotOnSale", async (buyerId) => {
-        const myUserId = userContract.getUserId(buyer.address);
+        const myUserId = await userContract.getUserId(seller.address);
         if(myUserId == buyerId){
             if (verified){
                 console.log('Title Not on Sale');
@@ -89,24 +94,24 @@ async function main() {
 
     });
     userContract.on("TitlePurchased", async (id, buyerId, purchased) => {
-        const myUserId = userContract.getUserId(buyer.address);
+        const myUserId = await userContract.getUserId(seller.address);
         if(myUserId == buyerId){
             if (purchased){
-                rl.write(`Title ${id} purchased!`);
+                console.log(`Title ${id} purchased!`);
             }
             else{
-                    rl.write(`Title ${id} not purchased!`);
+                console.log(`Title ${id} not purchased!`);
             }
         }
     });
     userContract.on("PurchaseVerified", async (titleId, sellerId, sold) => {
-        const myUserId = userContract.getUserId(buyer.address);
+        const myUserId = await userContract.getUserId(buyer.address);
         if(myUserId == sellerId){
             if (purchased){
-                rl.write(`Title ${titleId} sold!`);
+                console.log(`Title ${titleId} sold!`);
             }
             else{
-                    rl.write(`Title ${titleId} not sold!`);
+                console.log(`Title ${titleId} not sold!`);
             }
         }
     });
@@ -114,11 +119,6 @@ async function main() {
 
     const txn = await userContract.userRegistration();
     await txn.wait();
-
-    // while(!userRegistered){
-    //     // console.log(userRegistered);
-    // }
-    
     
 }
 

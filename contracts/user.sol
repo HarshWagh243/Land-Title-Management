@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-
+import "hardhat/console.sol";
 import "./landTitle.sol";  
 
 // // To -do 
@@ -34,6 +34,7 @@ contract userFunctionality{
     event TitlePurchased(uint256 id, uint256 buyerId, bool purchased);//user
     event verifyPurchaseOracle(uint256 titleId, uint256 buyerId);//oracle
     event PurchaseVerified(uint256 _titleId, uint256 sellerId, bool sold);//user
+    event TitleOnSale(uint256 _titleId, address userAddress);
 
     struct userDetails{
         uint256 userId;
@@ -130,9 +131,10 @@ contract userFunctionality{
      * @param _titleId LandTitle details (struct from landtitle) 
      */ 
     function putForSale(uint256 _titleId, uint256 _price) public{
-        // oracle will verify the details and then 
         require(users[msg.sender].userId >= 1, 'User not registered!');
         titleContract.putTitleForSale(_titleId, users[msg.sender].userId, _price);
+        emit TitleOnSale(_titleId, msg.sender);
+        console.log("Got here!!");
     }
 
     /**
