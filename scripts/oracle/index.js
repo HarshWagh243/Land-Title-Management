@@ -14,14 +14,12 @@ async function main() {
     const userAddress = process.env.address1
     const userContract = new ethers.Contract(userAddress, userABI, oracle);
     console.log("Oracle is listening for events...");
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
     userContract.on("getUserVerified", async (address) => {
         console.log(`getUserVerified event received for userId: ${address}`);
-
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-        });
-
         rl.question("Approve user registration (yes/no)? ", async (answer) => {
             if (answer.toLowerCase() === "yes") {
                 const txn = await userContract.verifyUser(address, true);
@@ -30,18 +28,11 @@ async function main() {
             } else {
                 console.log(`User with address ${address} rejected.`);
             }
-            rl.close();
         }); 
-       console.log("Oracle is listening for events...");
     });
     userContract.on("verifyPurchaseOracle", async (titleId, buyerId) => {
         console.log(`verifyPurchaseOracle event received for titleId: ${titleId}`);
         console.log(`buyerId: ${buyerId}`);
-
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-        });
 
         rl.question("Transaction complete (yes/no)? ", async (answer) => {
             if (answer.toLowerCase() === "yes") {
@@ -51,32 +42,23 @@ async function main() {
                 const txn = await userContract.verifyPurchase(buyerId, titleId, false);
                 await txn.wait();
             }
-            rl.close();
         }); 
-       console.log("Oracle is listening for events...");
     });
     userContract.on("getLandVerified", async (address, details) => {
         console.log(`getLandVerified event received for userAddress: ${address}`);
-
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-        });
 
         rl.question("Approve land registration (yes/no)? ", async (answer) => {
             if (answer.toLowerCase() === "yes") {
                 const txn = await userContract.verifyLandDetails(details, address, true);
                 await txn.wait();
-                // console.log(`${details} land registration approved.`);
-                // console.log(`Owner: ${address}`);
+                console.log(`${details} land registration approved.`);
+                console.log(`Owner: ${address}`);
             } else {
                 const txn = await userContract.verifyLandDetails(details, address, false);
                 await txn.wait();
                 // console.log(`${details} land registration rejected.`);
             }
-            rl.close();
-        }); 
-       console.log("Oracle is listening for events...");
+        });
     });
 }
 

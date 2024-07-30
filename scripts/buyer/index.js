@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 const readline = require("readline");
 const fs = require("fs");
 
+const titlesOnSale = new Set();
 async function main() {
     const [_,, buyer] = await ethers.getSigners();
 
@@ -12,9 +13,7 @@ async function main() {
     const userAddress = process.env.address1
     const userContract = new ethers.Contract(userAddress, userABI, buyer);
 
-    const txRegister = await userContract.userRegistration();
-    await txRegister.wait();
-
+    
     userContract.on("userVerified", async (address, verified) => {
         if(address == buyer.address){
             const rl = readline.createInterface({
@@ -30,6 +29,7 @@ async function main() {
         }
     });
     userContract.on("LandVerified", async (userId, titleId, details, verified) => {
+        titlesOnSale.add(parseInt(titleId));
         const myUserId = userContract.getUserId(buyer.address);
         if(myUserId == userId){
             const rl = readline.createInterface({
@@ -120,6 +120,29 @@ async function main() {
             }
         }
     });
+    // {
+    //     console.log("User registration initiated...!")
+    //     const txRegister = await userContract.userRegistration();
+    //     await txRegister.wait();
+    //     // print lands on sale
+
+    //     console.log("Land Titles on Sale...\n");
+    //     for (key in titlesOnSale){
+    //         console.log(key + "\t");
+    //     }
+    // }
+}
+
+
+async function userReg(){
+    console.log("User registration initiated...!")
+        const txRegister = await userContract.userRegistration();
+        await txRegister.wait();   
+}
+
+async function initiateBuy(){
+    console.log(`Transaction initiated for title ${titleId}...`);
+    console.log("Waiting for oracle ");
 }
 
 main()
