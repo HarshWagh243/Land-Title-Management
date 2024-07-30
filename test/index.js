@@ -73,7 +73,7 @@ describe('landTitle', () => {
             await expect(userContract.connect(oracle).verifyLandDetails("pennant hills", seller.address, true)).to.emit(userContract, "LandVerified").withArgs(sellerId, titleId, "pennant hills", true);
 
             //check if the title details are updated in both the contracts    
-            await expect(userContract.connect(seller).getLandDetails(titleId)).to.emit(userContract, "LandDetails").withArgs(titleId, sellerId, 0, "pennant hills");
+            await expect(userContract.connect(seller).getLandDetails(titleId)).to.emit(userContract, "LandDetails").withArgs(seller.address, titleId, sellerId, 0, "pennant hills");
             expect(await userContract.connect(oracle).checkOwns(sellerId, titleId)).to.equal(true);
         }); 
     });
