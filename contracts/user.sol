@@ -198,5 +198,4 @@ contract userFunctionality{
         emit TitleSold(titleId, sellerId, verified);
         emit TitlePurchased(titleId, buyerId, verified);
     }
-
 }
