@@ -12,7 +12,7 @@ async function main() {
     const userABI = userJson.abi;
     const userAddress = process.env.address1
     const userContract = new ethers.Contract(userAddress, userABI, buyer);
-
+    
     
     userContract.on("userVerified", async (address, verified) => {
         if(address == buyer.address){
