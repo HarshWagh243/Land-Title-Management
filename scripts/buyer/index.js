@@ -16,133 +16,97 @@ async function main() {
     
     userContract.on("userVerified", async (address, verified) => {
         if(address == buyer.address){
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-            });
             if (verified){
-                rl.write('User verification succesful');
+                console.log('User verification succesful');
+                const myUserId = await userContract.getUserId(buyer.address);
+                console.log("User ID: ", parseInt(myUserId));
+                const txn = await userContract.getLandDetails(10000);
+                await txn.wait();
             }
             else{
-                    rl.write("User verification failed!");
+                console.log("User verification failed!");
             }
+            
         }
     });
     userContract.on("LandVerified", async (userId, titleId, details, verified) => {
         titlesOnSale.add(parseInt(titleId));
         const myUserId = userContract.getUserId(buyer.address);
         if(myUserId == userId){
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-            });
             if (verified){
-                rl.write(`Land verification ${details} succesful`);
-                rl.write(`titleId: ${titleId}`);
+                console.log(`Land verification ${details} succesful`);
+                console.log(`titleId: ${titleId}`);
             }
             else{
-                rl.write(`Land verification ${details} unsuccesful`);
+                console.log(`Land verification ${details} unsuccesful`);
             }
         }
     });
     userContract.on("LandDetails", async (caller, titleId,  ownerId,  price, details) => {
         if(caller == buyer.address){
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-            });
             if (price == '0'){
-                rl.write(`Land ${titleId} is not on sale`);
+                console.log(`Land ${titleId} is not on sale`);
             }
             else{
-                rl.write(`TitleId:${titleId},\n
-                    OwnerId: ${ownerId},\n  
-                    Price: ${price},\n 
-                    Details: ${details}\n`)
+                console.log(`TitleId:${titleId},\n
+OwnerId: ${ownerId}, 
+Price: ${price},
+Details: ${details}`)
             }
-
+            // const buyerId = await userContract.getUserId(buyer.address);
+            const txn =  await userContract.buyThisTitle(titleId);
+            await txn.wait();
         }
     });
+    userContract.on("TitleOnSale", async (titleId, userAddress) => {
+        if(userAddress == buyer.address){
+            console.log(`Title with titleId ${titleId} is on Sale!`);
+        }
+
+    });
     userContract.on("TitleSold", async (titleId, sellerId, sold) => {
-        const myUserId = userContract.getUserId(buyer.address);
+        const myUserId = await userContract.getUserId(buyer.address);
         if(myUserId == sellerId){
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-            });
             if (sold){
-                rl.write(`Title ${titleId} sold!`);
+                console.log(`Title ${titleId} sold!`);
             }
             else{
-                    rl.write("Title ${titleId} not sold!");
+                console.log(`Title ${titleId} not sold!`);
             }
         }
     });
     userContract.on("TitleNotOnSale", async (buyerId) => {
-        const myUserId = userContract.getUserId(buyer.address);
+        const myUserId = await userContract.getUserId(buyer.address);
         if(myUserId == buyerId){
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-            });
             if (verified){
-                rl.write('Title Not on Sale');
+                console.log('Title Not on Sale');
             }
         }
     });
     userContract.on("TitlePurchased", async (id, buyerId, purchased) => {
-        const myUserId = userContract.getUserId(buyer.address);
+        const myUserId = await userContract.getUserId(buyer.address);
         if(myUserId == buyerId){
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-            });
             if (purchased){
-                rl.write(`Title ${id} purchased!`);
+                console.log(`Title ${id} purchased!`);
             }
             else{
-                    rl.write(`Title ${id} not purchased!`);
+                console.log(`Title ${id} not purchased!`);
             }
         }
     });
     userContract.on("PurchaseVerified", async (titleId, sellerId, sold) => {
-        const myUserId = userContract.getUserId(buyer.address);
+        const myUserId = await userContract.getUserId(buyer.address);
         if(myUserId == sellerId){
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-            });
             if (purchased){
-                rl.write(`Title ${titleId} sold!`);
+                console.log(`Title ${titleId} sold!`);
             }
             else{
-                    rl.write(`Title ${titleId} not sold!`);
+                console.log(`Title ${titleId} not sold!`);
             }
         }
     });
-    // {
-    //     console.log("User registration initiated...!")
-    //     const txRegister = await userContract.userRegistration();
-    //     await txRegister.wait();
-    //     // print lands on sale
-
-    //     console.log("Land Titles on Sale...\n");
-    //     for (key in titlesOnSale){
-    //         console.log(key + "\t");
-    //     }
-    // }
-}
-
-
-async function userReg(){
-    console.log("User registration initiated...!")
-        const txRegister = await userContract.userRegistration();
-        await txRegister.wait();   
-}
-
-async function initiateBuy(){
-    console.log(`Transaction initiated for title ${titleId}...`);
-    console.log("Waiting for oracle ");
+    const txn = await userContract.userRegistration();
+    await txn.wait();
 }
 
 main()
