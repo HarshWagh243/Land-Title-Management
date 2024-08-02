@@ -3,18 +3,8 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "./landTitle.sol";  
 
-// // To -do 
-// // oracle to database connectivity(at the very end if possible)
-// get function for user details
-// should deployer be different than oracle
-
+// contract2 user which requires land title contract to be deployed before deploying it
 contract userFunctionality{
-    // to make sure delegate call doesn't give errors
-    // address oracle;
-    // uint256 public timeout;     // Timeout in AEST as UNIX timestamp should be initiated when transaction is initiated
-    // bool public inUse;
-    // uint256 public nextId;
-
     address public titleAddress;
     LandTitle public titleContract; 
     uint256 private idCounter;
@@ -36,6 +26,7 @@ contract userFunctionality{
     event PurchaseVerified(uint256 _titleId, uint256 sellerId, bool sold);//user
     event TitleOnSale(uint256 _titleId, address userAddress);
 
+    // user struct, has all the details about a user
     struct userDetails{
         uint256 userId;
         uint256 certificateId; //stores id of certificate issued by CA
@@ -51,14 +42,12 @@ contract userFunctionality{
         titleContract = LandTitle(_landTitleAddress);
         idCounter = 1;
         certIdCounter = 1000;
-        // inUse = titleContract.inUse();
-        // oracle = titleContract.oracle();
-        // nextId = titleContract.nextId();
     }
 
     /**
      * @dev users initiates the registration.
      */
+    // function to register a new user once the user is verified
     function userRegistration() public{
         if (users[msg.sender].userId < 1)
             emit getUserVerified(msg.sender);
@@ -71,6 +60,7 @@ contract userFunctionality{
      * @param userAddress address of the user
      * @param verified true if oracle verifies
      */
+    // function to verify the user, before it is registered as a new user
     function verifyUser(address userAddress, bool verified) public returns (bool){
         require(titleContract.inUse(), "Contract is disabled!");
         require(msg.sender == titleContract.oracle(), "Only oracle can add the user!");
@@ -89,6 +79,7 @@ contract userFunctionality{
      * @param userAddress user Address
      * @return userId of the address provided 
      */ 
+    // getter function to get the user_id assosciated to a user
     function getUserId(address userAddress) public view returns(uint256){
         return users[userAddress].userId;
     }
@@ -98,6 +89,7 @@ contract userFunctionality{
      *
      * @param _details LandTitle details (struct from landtitle) 
      */ 
+    // function initiated by user to add new land details, which are added once the oracle verifies it
     function sendLandDetails(string memory _details) public{
         require(titleContract.inUse(), "Contract is disable!");
         require(users[msg.sender].userId >= 1, 'User not registered!');
@@ -108,6 +100,7 @@ contract userFunctionality{
      *
      * @param _details LandTitle details (struct from landtitle) 
      */ 
+    // function used to verify the land details, which once verfied, the new land detail record is added
     function verifyLandDetails(string memory _details, address userAddress, bool verified) public returns (uint256, uint256){
         // uint256 tempId = 0;
         uint256 userId = users[userAddress].userId;
@@ -116,10 +109,7 @@ contract userFunctionality{
         require(userId >= 1, 'User not registered!');
         uint256 titleId = titleContract.addTitle(_details, userId, verified);
         if (verified){
-            // require(success, "Delegate Call failed!");
-            // tempId = abi.decode(result, (uint256));
             require(titleId >= 10000);
-            // tempId = titleContract.addTitle(_details, userId, verified);
             owners[userId][titleId] = true;
         }
         emit LandVerified(userId, titleId, _details, verified);
@@ -130,6 +120,7 @@ contract userFunctionality{
      *
      * @param _titleId LandTitle details (struct from landtitle) 
      */ 
+    // function initiated by a verified user(seller) to put a verified land title on sale
     function putForSale(uint256 _titleId, uint256 _price) public{
         require(users[msg.sender].userId >= 1, 'User not registered!');
         titleContract.putTitleForSale(_titleId, users[msg.sender].userId, _price);
@@ -141,7 +132,8 @@ contract userFunctionality{
      * @dev put a title on sale.
      *
      * @param _titleId LandTitle details (struct from landtitle) 
-     */ 
+     */
+    // getter function to get land details assosciated to a land title id 
     function getLandDetails(uint256 _titleId) public{
         require(users[msg.sender].userId >= 1, 'User not registered!');
         emit LandDetails(msg.sender ,_titleId, titleContract.getTitleOwnerId(_titleId), titleContract.getTitlePrice(_titleId), titleContract.getTitleDetails(_titleId));
@@ -152,6 +144,7 @@ contract userFunctionality{
      *
      * @param _titleId LandTitle details (struct from landtitle) 
      */ 
+    // function initiated by a verified user(buyer) to purchase a verfied land which is on sale
     function buyThisTitle(uint256 _titleId) public {
         // oracle will verify the details and then 
         uint256 buyerId = users[msg.sender].userId;
@@ -173,9 +166,9 @@ contract userFunctionality{
      * @param userId user id
      * @param titleId LandTitle details (struct from landtitle) 
      */ 
+    // function to check if the land title for which the user(buyer) initiated a purchase is on sale
     function checkOwns(uint256 userId, uint256 titleId) public view returns (bool){
         // oracle will verify the details and then 
-        // require(users[msg.sender].userId >= 1, 'User not registered!');
         require(msg.sender == titleContract.oracle(), "Only oracle can check ownership!");
         return owners[userId][titleId];
     }
@@ -186,6 +179,7 @@ contract userFunctionality{
      * @param titleId LandTitle details (struct from landtitle) 
      * @param verified or not
      */ 
+    // function to verify if the initiated buying is approved and confirmed
     function verifyPurchase(uint256 buyerId, uint256 titleId, bool verified) public{
         require(msg.sender == titleContract.oracle(), "Only oracle can add the user!");
         // Timeout functionality
