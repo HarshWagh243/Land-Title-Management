@@ -1,23 +1,27 @@
-// scripts/oracleListener.js
-// const { ethers } = require("ethers");
 const { ethers } = require("hardhat");
 const readline = require("readline");
 const fs = require("fs");
 
 async function main() {
-    // const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
+    // get oracle details
     const [,oracle] = await ethers.getSigners();
 
+    // collect contract abi
     const userData = fs.readFileSync('artifacts/contracts/user.sol/userFunctionality.json', 'utf8');
     const userJson = JSON.parse(userData);
     const userABI = userJson.abi;
+
+    // get contract address from terminal
     const userAddress = process.env.address1
+
+    // connect to User contract
     const userContract = new ethers.Contract(userAddress, userABI, oracle);
     console.log("Oracle is listening for events...");
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
     });
+    // listen to user verification event
     userContract.on("getUserVerified", async (address) => {
         console.log(`getUserVerified event received for userId: ${address}`);
         rl.question("Approve user registration (yes/no)? ", async (answer) => {
@@ -30,6 +34,7 @@ async function main() {
             }
         }); 
     });
+    // listen to verifyPurchaseOracle to verify any transaction
     userContract.on("verifyPurchaseOracle", async (titleId, buyerId) => {
         console.log(`verifyPurchaseOracle event received for titleId: ${titleId}`);
         console.log(`buyerId: ${buyerId}`);
@@ -44,6 +49,7 @@ async function main() {
             }
         }); 
     });
+    // listen to getLandVerified to verify any landtitle and it's owner
     userContract.on("getLandVerified", async (address, details) => {
         console.log(`getLandVerified event received for userAddress: ${address}`);
 
@@ -56,15 +62,9 @@ async function main() {
             } else {
                 const txn = await userContract.verifyLandDetails(details, address, false);
                 await txn.wait();
-                // console.log(`${details} land registration rejected.`);
             }
         });
     });
 }
 
 main()
-    // .then(() => process.exit(0))
-    // .catch((error) => {
-    //     console.error(error);
-    //     process.exit(1);
-    // });

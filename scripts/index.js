@@ -1,19 +1,22 @@
-// scripts/deployContracts.js
+// Deployment Script
 const { ethers } = require("hardhat");
 
 async function main() {
     const [deployer] = await ethers.getSigners();
 
     console.log("Deploying contracts with the account:", deployer.address);
-
+    // Deploy Land Title
     const LandTitle = await ethers.getContractFactory("LandTitle");
     const [_, oracle] = await ethers.getSigners();
     const landContract = await LandTitle.deploy(oracle.address);
     console.log("Oracle address: ", oracle.address);
     await landContract.waitForDeployment();
+
+    // LandTitle contract address
     const landAddress = await landContract.getAddress();
     console.log("LandTitle contract deployed to:", landAddress);
 
+    // Deploy UserFunctionality contract
     const UserFunctionality = await ethers.getContractFactory("userFunctionality");
     const userContract = await UserFunctionality.deploy(landContract.getAddress());
     await userContract.waitForDeployment();

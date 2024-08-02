@@ -1,15 +1,7 @@
-// To - Do
-// test for added land by user is in his owned land
-// test for putforSale
-// test for buytitle
-// write more test cases 
-
 const {expect, use} = require('chai');
-const { log, Console } = require('console');
 const exp = require('constants');
 const { isValidName } = require('ethers');
 const { accessSync } = require('fs');
-// const { ethers } = require('hardhat');
 const hre = require("hardhat");
 const { before } = require('node:test');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
@@ -17,6 +9,7 @@ const { time } = require('@nomicfoundation/hardhat-network-helpers');
 describe('landTitle', () => {
     let landtitle, landContract, user, userContract, landTitleAddress; 
     beforeEach(async ()  => {
+        // Run deployment and before each test case
         [oracle, buyer, seller, dummy, _] = await ethers.getSigners();
         landtitle = await hre.ethers.getContractFactory('LandTitle');
         landContract = await landtitle.deploy(oracle.address);
@@ -25,7 +18,6 @@ describe('landTitle', () => {
         user = await hre.ethers.getContractFactory('userFunctionality');
         userContract = await user.deploy(landTitleAddress);
         userContract = await userContract.waitForDeployment();
-        // userAddress = await userContract.getAddress();
 
         // buyer registers
         await expect(userContract.connect(buyer).userRegistration()).to.emit(userContract, "getUserVerified").withArgs(buyer.address);
@@ -37,7 +29,7 @@ describe('landTitle', () => {
 
 
     });
-
+    // Testing for deployment
     describe('Deployment', () => {
         it('Should pass address of landtitle contract as an argument to user contract!', async ()=> {
             const addressAtUser = await userContract.titleAddress();
@@ -47,6 +39,7 @@ describe('landTitle', () => {
             expect(await landContract.inUse()).to.equal(true);
         })
     });
+    // Testing for verification of user
     describe('Verified user', () => {
         it('Should add a verified user', async () => {
             const userId = await userContract.getUserId(buyer);
@@ -56,14 +49,13 @@ describe('landTitle', () => {
             await userContract.connect(seller).userRegistration();
             await userContract.connect(oracle).verifyUser(seller.address, false);
             const userId = await userContract.connect(oracle).getUserId(buyer.address);
-            // console.log(await landContract.oracle());
             try {
                 expect(userId >= 1).to.equal(true);
             } catch (error) {
-                // console.log("User not verified!!");
             }
         });
     });
+    // Testing for land details getting updated in both the contracts
     describe("User owned land in owners", () => {
         it("user owned land should be in both the contract!", async () => {
             // seller adds his owned land
@@ -77,6 +69,7 @@ describe('landTitle', () => {
             expect(await userContract.connect(oracle).checkOwns(sellerId, titleId)).to.equal(true);
         }); 
     });
+    // Testing buyinh process
     describe("Buy only if its on Sale", () => {
         it("Should not allow to buy as its not on sale", async () => {
             await expect(userContract.connect(seller).sendLandDetails("pennant hills")).to.emit(userContract, "getLandVerified").withArgs(seller.address, "pennant hills");
@@ -102,7 +95,7 @@ describe('landTitle', () => {
             await userContract.connect(buyer).buyThisTitle(titleId); // doesn't through any errors
         });
     });
-
+    // Testing ownership change
     describe("Check ownership change", () => {
         it("Should change owner details when transaction is approved!", async () => {
             await expect(userContract.connect(seller).sendLandDetails("pennant hills")).to.emit(userContract, "getLandVerified").withArgs(seller.address, "pennant hills");
@@ -118,11 +111,10 @@ describe('landTitle', () => {
 
             // check new ownership
             const newOwnerId = await landContract.getTitleOwnerId(titleId);
-            // console.log(newOwnerId);
             await expect(newOwnerId).to.equal(buyerId);
-            console.log(oracle)
         });
     });
+    // Testing timeout
     describe('Timeout', () => {
         it('Transaction should be declined if timeout has expired', async () => {
             await expect(userContract.connect(seller).sendLandDetails("pennant hills")).to.emit(userContract, "getLandVerified").withArgs(seller.address, "pennant hills");
@@ -137,7 +129,7 @@ describe('landTitle', () => {
                 .to.be.revertedWith("Transaction has timed out");
         });
     });
-
+    // Testing double purchase attempt
     describe("Double Purchase Attempt", () => {
         it("Should not allow to buy the same title twice", async () => {
             // Seller sends land details
